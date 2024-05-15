@@ -7,6 +7,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
+alphaverse = { git = "https://www.github.com/alphaprime-dev/alphaverse.git", tag = "v0.17.4" }
 
 
 [tool.poetry.group.dev.dependencies]
