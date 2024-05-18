@@ -7,14 +7,15 @@ from alphaverse.expr.factor import Factor
 
 
 class PriceProvider(BaseDataProvider):
+    def __init__(self, field: str):
+        self._field = field
+
     def symbol_column_name(self) -> str:
         return "code"
 
     async def fetch(self, factor: Factor, dt: datetime.datetime) -> pl.DataFrame:
-        data = pl.read_parquet("resource/kr_stock_ohlcv.parquet").filter(
-            pl.col("dt") == dt & pl.col("code") == Factor.name
-        )
-        return data
+        data = pl.read_parquet("resource/kr_stock_ohlcv.parquet").filter(pl.col("dt") == dt)
+        return data.select(["dt", "code", self._field])
 
 
 class SMAProvider(BaseDataProvider):
@@ -27,7 +28,7 @@ class SMAProvider(BaseDataProvider):
     async def fetch(self, factor: Factor, dt: datetime.datetime) -> pl.DataFrame:
         data = pl.read_parquet("resource/kr_stock_ohlcv.parquet")
         sma = get_ta_function("sma")(data["close"], self.window)
-        return sma
+        return sma.filter(pl.col("dt") == dt)
 
 
 class NewPriceProvider(BaseDataProvider):
@@ -41,7 +42,7 @@ class NewPriceProvider(BaseDataProvider):
     async def fetch(self, factor: Factor, dt: datetime.datetime) -> pl.DataFrame:
         data = pl.read_parquet("resource/kr_stock_ohlcv.parquet").sort("dt")
         if self._field == "high":
-            df = data.rolling(index_column="dt", period=self._window, group_by="code").agg(
+            df = data.rolling(index_column="dt", period=f"{self._window}w", group_by="code").agg(
                 pl.col(self._field).max().alias(f"{self._field}{self._window}")
             )
         elif self._field == "low":
