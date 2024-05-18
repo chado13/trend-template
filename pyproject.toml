@@ -6,9 +6,9 @@ authors = ["chado13 <geaya13@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.10"
 alphaverse = { git = "https://www.github.com/alphaprime-dev/alphaverse.git", tag = "v0.17.4" }
-
+alphata = { git = "https://www.github.com/alphaprime-dev/alphata.git", tag = "v0.2.5" }
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.4.4"
