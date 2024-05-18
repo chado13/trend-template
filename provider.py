@@ -11,7 +11,7 @@ class PriceProvider(BaseDataProvider):
         return "code"
 
     async def fetch(self, factor: Factor, dt: datetime.datetime) -> pl.DataFrame:
-        data = pl.read_csv("resource/ohlcv.csv").filter(
+        data = pl.read_parquet("resource/kr_stock_ohlcv.parquet").filter(
             pl.col("dt") == dt & pl.col("code") == Factor.name
         )
         return data
@@ -25,7 +25,7 @@ class SMAProvider(BaseDataProvider):
         return "code"
 
     async def fetch(self, factor: Factor, dt: datetime.datetime) -> pl.DataFrame:
-        data = pl.read_csv("resource/ohlcv.csv")
+        data = pl.read_parquet("resource/kr_stock_ohlcv.parquet")
         sma = get_ta_function("sma")(data["close"], self.window)
         return sma
 
@@ -39,7 +39,7 @@ class NewPriceProvider(BaseDataProvider):
         return "code"
 
     async def fetch(self, factor: Factor, dt: datetime.datetime) -> pl.DataFrame:
-        data = pl.read_csv("resource/ohlcv.csv").sort("dt")
+        data = pl.read_parquet("resource/kr_stock_ohlcv.parquet").sort("dt")
         if self._field == "high":
             df = data.rolling(index_column="dt", period=self._window, group_by="code").agg(
                 pl.col(self._field).max().alias(f"{self._field}{self._window}")
@@ -60,7 +60,7 @@ class SmaMomentumProvider(BaseDataProvider):
         return "code"
 
     async def fetch(self, factor: Factor, dt: datetime.datetime) -> pl.DataFrame:
-        data = pl.read_csv("resource/ohlcv.csv").sort("dt")
+        data = pl.read_parquet("resource/kr_stock_ohlcv.parquet").sort("dt")
         sma = get_ta_function("sma")(data["close"], self._window)
         momentum = (
             sma.sort("dt")
@@ -84,13 +84,13 @@ class RSProvider(BaseDataProvider):
             return df.select(["dt", "code", "rs"])
 
         index = (
-            pl.read_csv("resource/index.csv")
+            pl.read_parquet("resource/index.parquet")
             .sort("dt")
             .with_columns(pl.col("close").pct_change().fill_null(0).over("code").alias("return"))
             .select(["dt", "return"])
         )
         data = (
-            pl.read_csv("resource/ohlcv.csv")
+            pl.read_parquet("resource/kr_stock_ohlcv.parquet")
             .sort("dt")
             .with_columns(pl.col("close").pct_change().fill_null(0).over("code").alias("return"))
             .select(["dt", "code", "return"])
