@@ -9,6 +9,8 @@ readme = "README.md"
 python = "^3.10"
 alphaverse = { git = "https://www.github.com/alphaprime-dev/alphaverse.git", tag = "v0.17.4" }
 alphata = { git = "https://www.github.com/alphaprime-dev/alphata.git", tag = "v0.2.5" }
+requests = "^2.32.3"
+click = "^8.1.7"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.4.4"
