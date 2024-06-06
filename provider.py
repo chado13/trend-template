@@ -15,8 +15,9 @@ class PriceProvider(BaseDataProvider):
         return "code"
 
     async def fetch(self, factor: Factor, dt: datetime.datetime) -> pl.DataFrame:
-        dt = datetime.datetime(2024, 5, 14)
-        data = pl.read_parquet("resource/kr_stock_ohlcv.parquet").filter(pl.col("dt") == dt)
+        data = pl.read_parquet("resource/kr_stock_ohlcv.parquet").filter(
+            pl.col("dt") == pl.col("dt").max()
+        )
         df = data.select(["code", self._field])
         return df
 
@@ -30,13 +31,12 @@ class SMAProvider(BaseDataProvider):
         return "code"
 
     async def fetch(self, factor: Factor, dt: datetime.datetime) -> pl.DataFrame:
-        dt = datetime.datetime(2024, 5, 14)
         data = pl.read_parquet("resource/kr_stock_ohlcv.parquet")
         func = get_ta_function("sma")
         sma = data.group_by("code").map_groups(
             lambda df: df.with_columns(func(df["close"], self.window).alias(f"sma{self.window}"))
         )
-        return sma.filter(pl.col("dt") == dt).select("code", f"sma{self.window}")
+        return sma.filter(pl.col("dt") == pl.col("dt").max()).select("code", f"sma{self.window}")
 
 
 class NewPriceProvider(BaseDataProvider):
@@ -49,7 +49,6 @@ class NewPriceProvider(BaseDataProvider):
         return "code"
 
     async def fetch(self, factor: Factor, dt: datetime.datetime) -> pl.DataFrame:
-        dt = datetime.datetime(2024, 5, 14)
         data = pl.read_parquet("resource/kr_stock_ohlcv.parquet").sort("dt")
         if self._field == "high":
             df = data.rolling(index_column="dt", period=f"{self._window}w", by="code").agg(
@@ -59,7 +58,9 @@ class NewPriceProvider(BaseDataProvider):
             df = data.rolling(index_column="dt", period=f"{self._window}w", by="code").agg(
                 pl.col(self._field).min().alias(f"{self._field}{self._window}")
             )
-        return df.filter(pl.col("dt") == dt).select("code", f"{self._field}{self._window}")
+        return df.filter(pl.col("dt") == pl.col("dt").max()).select(
+            "code", f"{self._field}{self._window}"
+        )
 
 
 class SmaMomentumProvider(BaseDataProvider):
@@ -72,7 +73,6 @@ class SmaMomentumProvider(BaseDataProvider):
         return "code"
 
     async def fetch(self, factor: Factor, dt: datetime.datetime) -> pl.DataFrame:
-        dt = datetime.datetime(2024, 5, 14)
         data = pl.read_parquet("resource/kr_stock_ohlcv.parquet").sort("dt")
         func = get_ta_function("sma")
         sma = data.group_by("code").map_groups(
@@ -81,7 +81,7 @@ class SmaMomentumProvider(BaseDataProvider):
         momentum = sma.sort("dt").with_columns(
             pl.col("close").diff().shift(self._period).over("code").alias("sma_momentum")
         )
-        return momentum.filter(pl.col("dt") == dt).select("code", "sma_momentum")
+        return momentum.filter(pl.col("dt") == pl.col("dt").max()).select("code", "sma_momentum")
 
 
 class RSProvider(BaseDataProvider):
@@ -90,8 +90,6 @@ class RSProvider(BaseDataProvider):
         return "code"
 
     async def fetch(self, factor: Factor, dt: datetime.datetime) -> pl.DataFrame:
-        dt = datetime.datetime(2024, 5, 14)
-
         def _calc_rs(data: pl.DataFrame) -> pl.DataFrame:
             df = data.join(index.select(["dt", "return"]), on="dt", suffix="_index").with_columns(
                 rs=pl.col("return") / pl.col("return_index")
@@ -111,4 +109,4 @@ class RSProvider(BaseDataProvider):
             .select(["dt", "code", "return"])
         )
         rs = data.group_by("code").apply(lambda x: _calc_rs(x))
-        return rs.filter(pl.col("dt") == dt).select(["code", "rs"])
+        return rs.filter(pl.col("dt") == pl.col("dt").max()).select(["code", "rs"])
