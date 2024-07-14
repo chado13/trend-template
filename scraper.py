@@ -4,6 +4,7 @@ from typing import Any
 import click
 import polars as pl
 import requests
+from dateutil.rrule import DAILY, rrule
 
 
 @click.command()
@@ -11,10 +12,21 @@ import requests
     "--dt",
     "-d",
     type=click.DateTime(formats=["%Y-%m-%d"]),
-    default=datetime.datetime.today().strftime("%Y-%m-%d"),
     help="Date to update data",
 )
 def main(dt: datetime.datetime):
+    if dt:
+        update(dt)
+    else:
+        last_dt = (
+            pl.read_parquet("resource/kr_stock_ohlcv.parquet").select(pl.col("dt").max()).item()
+        )
+        for dt in rrule(DAILY, dtstart=last_dt, until=datetime.datetime.now()):
+            print(dt)
+            update(dt)
+
+
+def update(dt: datetime.datetime):
     if _is_holiday(dt):
         return
     for type in ["stock", "index"]:
@@ -155,6 +167,7 @@ def _api_reqeust(payload: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
     url = "http://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd"
     headers = {
         "Referer": "http://data.krx.co.kr/contents/MDC/MDI/mdiLoader/index.cmd?menuId=MDC0201",
+        "User-Agent": "UserAgent",
     }
     res = requests.post(url, data=payload, headers=headers)
     if res.status_code != 200:
